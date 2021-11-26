@@ -20,6 +20,7 @@ from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler
 from tqdm import tqdm
 
 from src.utils.torch_utils import save_model
+from src.utils.common import save_classification_report
 
 
 def _get_n_data_from_dataloader(dataloader: DataLoader) -> int:
@@ -84,7 +85,7 @@ class TorchTrainer:
         criterion: nn.Module,
         optimizer: optim.Optimizer,
         scheduler,
-        model_path: str,
+        log_dir: str,
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
@@ -100,7 +101,7 @@ class TorchTrainer:
         """
 
         self.model = model
-        self.model_path = model_path
+        self.log_dir = log_dir
         self.criterion = criterion
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -168,11 +169,12 @@ class TorchTrainer:
                     f"Train: [{epoch + 1:03d}] "
                     f"Loss: {(running_loss / (batch + 1)):.3f}, "
                     f"Acc: {(correct / total) * 100:.2f}% "
-                    f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.2f}"
+                    f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.2f}, "
+                    f"lr: {self.optimizer.param_groups[0]['lr']:.7f}"
                 )
             pbar.close()
 
-            _, test_f1, test_acc = self.test(
+            _, test_f1, test_acc, preds, gt = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
             if best_test_f1 > test_f1:
@@ -182,10 +184,11 @@ class TorchTrainer:
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
             save_model(
                 model=self.model,
-                path=self.model_path,
+                path=os.path.join(self.log_dir, "best.pt"),
                 data=data,
                 device=self.device,
             )
+            save_classification_report(path=self.log_dir, preds=preds, gt=gt)
 
         return best_test_acc, best_test_f1
 
@@ -244,7 +247,7 @@ class TorchTrainer:
         f1 = f1_score(
             y_true=gt, y_pred=preds, labels=label_list, average="macro", zero_division=0
         )
-        return loss, f1, accuracy
+        return loss, f1, accuracy, preds, gt
 
 
 def count_model_params(
