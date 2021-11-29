@@ -1,0 +1,1 @@
+nohup python tune.py --study automl숫자 > /dev/null 2>&1&
