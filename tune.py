@@ -2,6 +2,8 @@
 - Author: Junghoon Kim, Jongsun Shin
 - Contact: placidus36@gmail.com, shinn1897@makinarocks.ai
 """
+import platform
+import wandb
 import optuna
 import torch
 import torch.nn as nn
@@ -351,10 +353,13 @@ def objective(
         float: score1(e.g. accuracy)
         int: score2(e.g. params)
     """
+    wandb.run.name = f"{study_name}_{trial._trial_id}"
+    wandb.run.save()
+    trial.set_user_attr("worker", platform.node())
     RESULT_MODEL_PATH = f"./models/result_{study_name}_{trial._trial_id}.pt"  # result model will be saved in this path
     model_config: Dict[str, Any] = {}
     model_config["input_channel"] = 3
-    img_size = trial.suggest_categorical("input_img_size", [32, 64, 96])
+    img_size = trial.suggest_categorical("input_img_size", [32, 64])
     # img_size = 32
     model_config["INPUT_SIZE"] = [img_size, img_size]
     model_config["depth_multiple"] = trial.suggest_categorical(
@@ -416,6 +421,9 @@ def objective(
     params_nums = count_model_params(model)
 
     model_info(model, verbose=True)
+    wandb.log(
+        {"f1_score": f1_score, "params_nums": params_nums, "mean_time": mean_time}
+    )
     return f1_score, params_nums, mean_time
 
 
@@ -471,7 +479,7 @@ def tune(gpu_id, study_name, storage: str = None):
         storage=rdb_storage,
         load_if_exists=True,
     )
-    study.optimize(lambda trial: objective(trial, device, study_name), n_trials=100)
+    study.optimize(lambda trial: objective(trial, device, study_name), n_trials=1000)
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
@@ -499,17 +507,18 @@ def tune(gpu_id, study_name, storage: str = None):
 
 
 if __name__ == "__main__":
+    wandb.init(project="optimize", entity="rnl")
     parser = argparse.ArgumentParser(description="Optuna tuner.")
     parser.add_argument("--gpu", default=0, type=int, help="GPU id to use")
     parser.add_argument(
         "--storage",
-        default="postgresql://root:NPSP#JnCb^5Nq5@210.178.234.239:49168/taco_search",
+        default="",
         type=str,
         help="Optuna database storage path.",
     )
     parser.add_argument(
         "--study",
-        default="automl001",
+        default="automl101",
         type=str,
         help="study_name",
     )
