@@ -172,20 +172,21 @@ class TorchTrainer:
                 )
             pbar.close()
 
-            _, test_f1, test_acc = self.test(
-                model=self.model, test_dataloader=val_dataloader
-            )
-            if best_test_f1 > test_f1:
-                continue
-            best_test_acc = test_acc
-            best_test_f1 = test_f1
-            print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            save_model(
-                model=self.model,
-                path=self.model_path,
-                data=data,
-                device=self.device,
-            )
+            if epoch % 5 == 0:
+                _, test_f1, test_acc = self.test(
+                    model=self.model, test_dataloader=val_dataloader
+                )
+                if best_test_f1 > test_f1:
+                    continue
+                best_test_acc = test_acc
+                best_test_f1 = test_f1
+                print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
+                save_model(
+                    model=self.model,
+                    path=self.model_path,
+                    data=data,
+                    device=self.device,
+                )
 
         return best_test_acc, best_test_f1
 
