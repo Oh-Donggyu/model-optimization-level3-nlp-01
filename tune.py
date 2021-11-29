@@ -19,15 +19,14 @@ EPOCH = 100
 DATA_PATH = (
     "../data"  # type your data path here that contains test, train and val directories
 )
-RESULT_MODEL_PATH = "./result_model.pt"  # result model will be saved in this path
 
 
 def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
-    epochs = trial.suggest_int("epochs", low=50, high=50, step=50)
+    epochs = trial.suggest_int("epochs", low=50, high=100, step=5)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
     n_select = trial.suggest_int("n_select", low=0, high=6, step=2)
-    batch_size = trial.suggest_int("batch_size", low=16, high=32, step=16)
+    batch_size = trial.suggest_int("batch_size", low=16, high=64, step=4)
     return {
         "EPOCHS": epochs,
         "IMG_SIZE": img_size,
@@ -342,7 +341,9 @@ def search_model(trial: optuna.trial.Trial) -> List[Any]:
     return model, module_info
 
 
-def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
+def objective(
+    trial: optuna.trial.Trial, device, study_name
+) -> Tuple[float, int, float]:
     """Optuna objective.
     Args:
         trial
@@ -350,10 +351,11 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         float: score1(e.g. accuracy)
         int: score2(e.g. params)
     """
+    RESULT_MODEL_PATH = f"./models/result_{study_name}_{trial._trial_id}.pt"  # result model will be saved in this path
     model_config: Dict[str, Any] = {}
     model_config["input_channel"] = 3
-    # img_size = trial.suggest_categorical("img_size", [32, 64, 128])
-    img_size = 32
+    img_size = trial.suggest_categorical("input_img_size", [32, 64, 96])
+    # img_size = 32
     model_config["INPUT_SIZE"] = [img_size, img_size]
     model_config["depth_multiple"] = trial.suggest_categorical(
         "depth_multiple", [0.25, 0.5, 0.75, 1.0]
@@ -452,7 +454,7 @@ def get_best_trial_with_condition(optuna_study: optuna.study.Study) -> Dict[str,
     return best_trial_
 
 
-def tune(gpu_id, storage: str = None):
+def tune(gpu_id, study_name, storage: str = None):
     if not torch.cuda.is_available():
         device = torch.device("cpu")
     elif 0 <= gpu_id < torch.cuda.device_count():
@@ -464,12 +466,12 @@ def tune(gpu_id, storage: str = None):
         rdb_storage = None
     study = optuna.create_study(
         directions=["maximize", "minimize", "minimize"],
-        study_name="automl101",
+        study_name=study_name,
         sampler=sampler,
         storage=rdb_storage,
         load_if_exists=True,
     )
-    study.optimize(lambda trial: objective(trial, device), n_trials=500)
+    study.optimize(lambda trial: objective(trial, device, study_name), n_trials=500)
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
@@ -505,5 +507,11 @@ if __name__ == "__main__":
         type=str,
         help="Optuna database storage path.",
     )
+    parser.add_argument(
+        "--study",
+        default="automl001",
+        type=str,
+        help="study_name",
+    )
     args = parser.parse_args()
-    tune(args.gpu, storage=args.storage if args.storage != "" else None)
+    tune(args.gpu, args.study, storage=args.storage if args.storage != "" else None)
