@@ -409,7 +409,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     optimizer = torch.optim.Adam(model.parameters(), lr=hyperparams["lr"])
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr=0.1,
+        max_lr=hyperparams["lr"],
         steps_per_epoch=len(train_loader),
         epochs=hyperparams["EPOCHS"],
         pct_start=0.05,

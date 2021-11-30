@@ -133,7 +133,7 @@ class TorchTrainer:
         for epoch in range(n_epoch):
             running_loss, correct, total = 0.0, 0, 0
             preds, gt = [], []
-            pbar = tqdm(enumerate(train_dataloader), total=len(train_dataloader))
+            pbar = tqdm(enumerate(train_dataloader), total=len(train_dataloader), ncols=150)
             self.model.train()
             for batch, (data, labels) in pbar:
                 data, labels = data.to(self.device), labels.to(self.device)
@@ -177,8 +177,16 @@ class TorchTrainer:
             _, test_f1, test_acc = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
+
+            if epoch == 9 and best_test_f1 < 0.20:
+                return best_test_acc, best_test_f1
+            elif epoch == 25 and best_test_f1 < 0.25:
+                return best_test_acc, best_test_f1
+            elif epoch == 49 and best_test_f1 < 0.45:
+                return best_test_acc, best_test_f1
             if best_test_f1 > test_f1:
                 continue
+            
             best_test_acc = test_acc
             best_test_f1 = test_f1
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
@@ -190,11 +198,6 @@ class TorchTrainer:
                     device=self.device,
                 )
                 save_classification_report(path=self.log_dir, preds=preds, gt=gt)
-
-            if epoch == 9 and best_test_f1 < 0.20:
-                return best_test_acc, best_test_f1
-            elif epoch == 49 and best_test_f1 < 0.45:
-                return best_test_acc, best_test_f1
 
         return best_test_acc, best_test_f1
 
@@ -222,7 +225,7 @@ class TorchTrainer:
         num_classes = _get_len_label_from_dataset(test_dataloader.dataset)
         label_list = [i for i in range(num_classes)]
 
-        pbar = tqdm(enumerate(test_dataloader), total=len(test_dataloader))
+        pbar = tqdm(enumerate(test_dataloader), total=len(test_dataloader), ncols=150)
         model.to(self.device)
         model.eval()
         for batch, (data, labels) in pbar:
