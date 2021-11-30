@@ -20,6 +20,7 @@ from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler
 from tqdm import tqdm
 
 from src.utils.torch_utils import save_model
+from src.utils.common import save_classification_report
 
 
 def _get_n_data_from_dataloader(dataloader: DataLoader) -> int:
@@ -84,7 +85,7 @@ class TorchTrainer:
         criterion: nn.Module,
         optimizer: optim.Optimizer,
         scheduler,
-        model_path: str,
+        log_dir: str,
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
@@ -100,7 +101,7 @@ class TorchTrainer:
         """
 
         self.model = model
-        self.model_path = model_path
+        self.log_dir = log_dir
         self.criterion = criterion
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -180,12 +181,14 @@ class TorchTrainer:
             best_test_acc = test_acc
             best_test_f1 = test_f1
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            save_model(
-                model=self.model,
-                path=self.model_path,
-                data=data,
-                device=self.device,
-            )
+            if best_test_f1 > 0.6:
+                save_model(
+                    model=self.model,
+                    path=os.path.join(self.log_dir, "best.pt"),
+                    data=data,
+                    device=self.device,
+                )
+                save_classification_report(path=self.log_dir, preds=preds, gt=gt)
 
             if epoch == 9 and best_test_f1 < 0.20:
                 return best_test_acc, best_test_f1

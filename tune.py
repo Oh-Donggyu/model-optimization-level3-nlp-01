@@ -2,6 +2,8 @@
 - Author: Junghoon Kim, Jongsun Shin
 - Contact: placidus36@gmail.com, shinn1897@makinarocks.ai
 """
+import os
+import yaml
 import platform
 import wandb
 import optuna
@@ -14,6 +16,7 @@ from src.utils.torch_utils import model_info, check_runtime
 from src.trainer import TorchTrainer, count_model_params
 from typing import Any, Dict, List, Tuple
 from optuna.pruners import HyperbandPruner
+from optuna.integration.wandb import WeightsAndBiasesCallback
 from subprocess import _args_from_interpreter_flags
 import argparse
 
@@ -27,13 +30,15 @@ def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
     epochs = trial.suggest_int("epochs", low=100, high=100, step=100)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
-    n_select = trial.suggest_int("n_select", low=0, high=6, step=2)
+    n_select = trial.suggest_int("n_select", low=2, high=6, step=2)
     batch_size = trial.suggest_int("batch_size", low=16, high=64, step=4)
+    learning_rate = trial.suggest_float("learning_rate", low=0.1, high=0.2, step=0.05)
     return {
         "EPOCHS": epochs,
         "IMG_SIZE": img_size,
         "n_select": n_select,
         "BATCH_SIZE": batch_size,
+        "lr": learning_rate
     }
 
 
@@ -353,12 +358,18 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     """
     wandb.run.name = f"automl101_{trial._trial_id}"
     wandb.run.save()
+    
     trial.set_user_attr("worker", platform.node())
-    RESULT_MODEL_PATH = f"./models/result_{trial._trial_id}.pt"  # result model will be saved in this path
+    RESULT_MODEL_PATH = f"./models/good_trial_{trial._trial_id}"  # result model will be saved in this path
+
     model_config: Dict[str, Any] = {}
     model_config["input_channel"] = 3
-    img_size = trial.suggest_categorical("input_img_size", [32, 64])
-    # img_size = 32
+    
+    # img_size = trial.suggest_categorical("input_img_size", [32, 64])
+    # # img_size = 32
+    hyperparams = search_hyperparam(trial)
+    img_size = hyperparams["IMG_SIZE"]
+
     model_config["INPUT_SIZE"] = [img_size, img_size]
     model_config["depth_multiple"] = trial.suggest_categorical(
         "depth_multiple", [0.25, 0.5, 0.75, 1.0]
@@ -367,8 +378,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         "width_multiple", [0.25, 0.5, 0.75, 1.0]
     )
     model_config["backbone"], module_info = search_model(trial)
-    hyperparams = search_hyperparam(trial)
-
+    
     model = Model(model_config, verbose=True)
     model.to(device)
     model.model.to(device)
@@ -396,7 +406,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     train_loader, val_loader, _test_loader = create_dataloader(data_config)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=hyperparams["lr"])
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
         max_lr=0.1,
@@ -416,16 +426,23 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         scheduler,
         device=device,
         verbose=1,
-        model_path=RESULT_MODEL_PATH,
+        log_dir=RESULT_MODEL_PATH,
     )
-    trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
-    loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
+    best_test_acc, best_test_f1 = trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
+    # loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
+
+    if best_test_f1 > 0.6:
+        # save model_config, data_config
+        with open(os.path.join(RESULT_MODEL_PATH, "data.yml"), "w") as f:
+            yaml.dump(data_config, f, default_flow_style=False)
+        with open(os.path.join(RESULT_MODEL_PATH, "model.yml"), "w") as f:
+            yaml.dump(model_config, f, default_flow_style=False)
 
     model_info(model, verbose=True)
     wandb.log(
-        {"f1_score": f1_score, "params_nums": params_nums, "mean_time": mean_time}
+        {"f1_score": best_test_f1, "params_nums": params_nums, "mean_time": mean_time}
     )
-    return f1_score, params_nums, mean_time
+    return best_test_f1, params_nums, mean_time
 
 
 def get_best_trial_with_condition(optuna_study: optuna.study.Study) -> Dict[str, Any]:
