@@ -28,7 +28,7 @@ DATA_PATH = (
 
 def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
-    epochs = trial.suggest_int("epochs", low=100, high=100, step=100)
+    epochs = trial.suggest_int("epochs", low=50, high=70, step=10)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
     n_select = trial.suggest_int("n_select", low=2, high=6, step=2)
     batch_size = trial.suggest_int("batch_size", low=16, high=64, step=4)
@@ -416,7 +416,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     )
 
     params_nums = count_model_params(model)
-    if 50000 > params_nums or params_nums > 1000000:
+    if 100000 > params_nums or params_nums > 1000000:
         return 0, params_nums, 3
 
     trainer = TorchTrainer(
