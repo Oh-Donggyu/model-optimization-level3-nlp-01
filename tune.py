@@ -25,7 +25,7 @@ DATA_PATH = (
 
 def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
-    epochs = trial.suggest_int("epochs", low=50, high=100, step=5)
+    epochs = trial.suggest_int("epochs", low=100, high=100, step=100)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
     n_select = trial.suggest_int("n_select", low=0, high=6, step=2)
     batch_size = trial.suggest_int("batch_size", low=16, high=64, step=4)
@@ -343,9 +343,7 @@ def search_model(trial: optuna.trial.Trial) -> List[Any]:
     return model, module_info
 
 
-def objective(
-    trial: optuna.trial.Trial, device, study_name
-) -> Tuple[float, int, float]:
+def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     """Optuna objective.
     Args:
         trial
@@ -353,10 +351,10 @@ def objective(
         float: score1(e.g. accuracy)
         int: score2(e.g. params)
     """
-    wandb.run.name = f"{study_name}_{trial._trial_id}"
+    wandb.run.name = f"automl101_{trial._trial_id}"
     wandb.run.save()
     trial.set_user_attr("worker", platform.node())
-    RESULT_MODEL_PATH = f"./models/result_{study_name}_{trial._trial_id}.pt"  # result model will be saved in this path
+    RESULT_MODEL_PATH = f"./models/result_{trial._trial_id}.pt"  # result model will be saved in this path
     model_config: Dict[str, Any] = {}
     model_config["input_channel"] = 3
     img_size = trial.suggest_categorical("input_img_size", [32, 64])
@@ -407,6 +405,10 @@ def objective(
         pct_start=0.05,
     )
 
+    params_nums = count_model_params(model)
+    if 50000 > params_nums or params_nums > 1000000:
+        return 0, params_nums, 3
+
     trainer = TorchTrainer(
         model,
         criterion,
@@ -418,7 +420,6 @@ def objective(
     )
     trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
     loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
-    params_nums = count_model_params(model)
 
     model_info(model, verbose=True)
     wandb.log(
@@ -462,7 +463,7 @@ def get_best_trial_with_condition(optuna_study: optuna.study.Study) -> Dict[str,
     return best_trial_
 
 
-def tune(gpu_id, study_name, storage: str = None):
+def tune(gpu_id, storage: str = None):
     if not torch.cuda.is_available():
         device = torch.device("cpu")
     elif 0 <= gpu_id < torch.cuda.device_count():
@@ -474,12 +475,12 @@ def tune(gpu_id, study_name, storage: str = None):
         rdb_storage = None
     study = optuna.create_study(
         directions=["maximize", "minimize", "minimize"],
-        study_name=study_name,
+        study_name="automl101",
         sampler=sampler,
         storage=rdb_storage,
         load_if_exists=True,
     )
-    study.optimize(lambda trial: objective(trial, device, study_name), n_trials=1000)
+    study.optimize(lambda trial: objective(trial, device), n_trials=500)
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
@@ -511,16 +512,40 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Optuna tuner.")
     parser.add_argument("--gpu", default=0, type=int, help="GPU id to use")
     parser.add_argument(
-        "--storage",
-        default="",
-        type=str,
-        help="Optuna database storage path.",
-    )
-    parser.add_argument(
-        "--study",
-        default="automl101",
-        type=str,
-        help="study_name",
+        "--storage", default="", type=str, help="Optuna database storage path."
     )
     args = parser.parse_args()
-    tune(args.gpu, args.study, storage=args.storage if args.storage != "" else None)
+    tune(args.gpu, storage=args.storage if args.storage != "" else None)
+
+"""
+best_epoch_list = []
+early_stopping_count = 0
+
+if epoch % 10 == 0:
+    if epoch//10 <= 2 and f1 < epoch//10 * 0.35:
+
+    return acc, f1
+
+if best_f1 > 학습 결과 f1:
+    early_stopping_count += 1
+else: early_stopping_count = 0
+
+if early_stopping_count == 5:
+# 학습 끝나면
+
+
+
+
+tmp = best_test_f1
+if epoch == 9 and best_test_f1 < 0.20:
+    tmp = best_test_f1
+elif epoch == 19 and best_test_f1 - tmp < 0.2:
+    tmp = best_test_f1
+    return best_test_acc, best_test_f1
+elif epoch == 29 and best_test_f1 - tmp < 0.2:
+    tmp = best_test_f1
+    return best_test_acc, best_test_f1
+elif epoch == 39 and best_test_f1 - tmp < 0.2:
+    tmp = best_test_f1
+    return best_test_acc, best_test_f1
+"""

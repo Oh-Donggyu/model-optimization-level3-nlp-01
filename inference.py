@@ -160,7 +160,7 @@ if __name__ == "__main__":
         "--weight_name",
         type=str,
         help="Model weight file name. (best.pt, best.ts, ...)",
-        default="best.pt",
+        default="best.ts",
     )
     parser.add_argument(
         "--img_root",
