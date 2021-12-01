@@ -174,7 +174,7 @@ class TorchTrainer:
                 )
             pbar.close()
 
-            _, test_f1, test_acc = self.test(
+            _, test_f1, test_acc, preds, gt = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
 
@@ -256,7 +256,7 @@ class TorchTrainer:
         f1 = f1_score(
             y_true=gt, y_pred=preds, labels=label_list, average="macro", zero_division=0
         )
-        return loss, f1, accuracy
+        return loss, f1, accuracy, preds, gt
 
 
 def count_model_params(
