@@ -29,8 +29,8 @@ def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
     """Search hyperparam from user-specified search space."""
     epochs = trial.suggest_int("epochs", low=50, high=70, step=10)
     img_size = trial.suggest_categorical("img_size", [96, 112, 168, 224])
-    n_select = trial.suggest_int("n_select", low=2, high=6, step=2)
-    batch_size = trial.suggest_int("batch_size", low=16, high=64, step=4)
+    n_select = trial.suggest_int("n_select", low=1, high=5, step=1)
+    batch_size = trial.suggest_int("batch_size", low=16, high=64, step=16)
     learning_rate = trial.suggest_float("learning_rate", low=0.1, high=0.2, step=0.05)
     return {
         "EPOCHS": epochs,
@@ -367,6 +367,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     # img_size = trial.suggest_categorical("input_img_size", [32, 64])
     # # img_size = 32
     hyperparams = search_hyperparam(trial)
+    print(hyperparams)
     img_size = hyperparams["IMG_SIZE"]
 
     model_config["INPUT_SIZE"] = [img_size, img_size]
@@ -432,7 +433,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     )
     # loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
 
-    if best_test_f1 > 0.6:
+    if best_test_f1 > 0.5:
         # save model_config, data_config
         with open(os.path.join(RESULT_MODEL_PATH, "data.yml"), "w") as f:
             yaml.dump(data_config, f, default_flow_style=False)

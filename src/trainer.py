@@ -190,7 +190,7 @@ class TorchTrainer:
             best_test_acc = test_acc
             best_test_f1 = test_f1
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            if best_test_f1 > 0.6:
+            if best_test_f1 > 0.5:
                 save_model(
                     model=self.model,
                     path=os.path.join(self.log_dir, "best.pt"),
