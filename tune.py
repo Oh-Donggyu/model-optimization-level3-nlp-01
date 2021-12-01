@@ -16,7 +16,6 @@ from src.utils.torch_utils import model_info, check_runtime
 from src.trainer import TorchTrainer, count_model_params
 from typing import Any, Dict, List, Tuple
 from optuna.pruners import HyperbandPruner
-from optuna.integration.wandb import WeightsAndBiasesCallback
 from subprocess import _args_from_interpreter_flags
 import argparse
 
@@ -38,7 +37,7 @@ def search_hyperparam(trial: optuna.trial.Trial) -> Dict[str, Any]:
         "IMG_SIZE": img_size,
         "n_select": n_select,
         "BATCH_SIZE": batch_size,
-        "lr": learning_rate
+        "lr": learning_rate,
     }
 
 
@@ -358,13 +357,13 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
     """
     wandb.run.name = f"automl101_{trial._trial_id}"
     wandb.run.save()
-    
+
     trial.set_user_attr("worker", platform.node())
     RESULT_MODEL_PATH = f"./models/good_trial_{trial._trial_id}"  # result model will be saved in this path
 
     model_config: Dict[str, Any] = {}
     model_config["input_channel"] = 3
-    
+
     # img_size = trial.suggest_categorical("input_img_size", [32, 64])
     # # img_size = 32
     hyperparams = search_hyperparam(trial)
@@ -378,7 +377,7 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         "width_multiple", [0.25, 0.5, 0.75, 1.0]
     )
     model_config["backbone"], module_info = search_model(trial)
-    
+
     model = Model(model_config, verbose=True)
     model.to(device)
     model.model.to(device)
@@ -428,7 +427,9 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         verbose=1,
         log_dir=RESULT_MODEL_PATH,
     )
-    best_test_acc, best_test_f1 = trainer.train(train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader)
+    best_test_acc, best_test_f1 = trainer.train(
+        train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader
+    )
     # loss, f1_score, acc_percent = trainer.test(model, test_dataloader=val_loader)
 
     if best_test_f1 > 0.6:
