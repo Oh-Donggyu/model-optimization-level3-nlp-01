@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-=======
 import os
->>>>>>> origin
 from typing import Any, Dict, Union, List
 
 import numpy as np
@@ -36,8 +33,4 @@ def save_classification_report(path: str, preds: List[int], gt: List[int]):
     result = classification_report(gt, preds, zero_division=1)
     log_path = os.path.join(path, 'classification_result.txt')
     with open(log_path, 'w', encoding='utf-8') as f:
-<<<<<<< HEAD
         f.write(result)
-=======
-        f.write(result)
->>>>>>> origin
