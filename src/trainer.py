@@ -202,7 +202,11 @@ class TorchTrainer:
             self.stopping_count = 0
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
 <<<<<<< HEAD
+<<<<<<< HEAD
             if best_test_f1 > 0.6:
+=======
+            if best_test_f1 > 0.5:
+>>>>>>> 553d104cf3637523fbcb1ee9b8810d0683798b99
                 save_model(
                     model=self.model,
                     path=os.path.join(self.log_dir, "best.pt"),
