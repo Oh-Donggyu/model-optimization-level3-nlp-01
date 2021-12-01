@@ -347,7 +347,7 @@ def search_model(trial: optuna.trial.Trial) -> List[Any]:
     return model, module_info
 
 
-def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
+def objective(trial: optuna.trial.Trial, device, early_stopping, early_stopping_threshold) -> Tuple[float, int, float]:
     """Optuna objective.
     Args:
         trial
@@ -426,6 +426,8 @@ def objective(trial: optuna.trial.Trial, device) -> Tuple[float, int, float]:
         device=device,
         verbose=1,
         log_dir=RESULT_MODEL_PATH,
+        early_stopping=early_stopping,
+        early_stopping_threshold=early_stopping_threshold
     )
     best_test_acc, best_test_f1 = trainer.train(
         train_loader, hyperparams["EPOCHS"], val_dataloader=val_loader
@@ -481,7 +483,7 @@ def get_best_trial_with_condition(optuna_study: optuna.study.Study) -> Dict[str,
     return best_trial_
 
 
-def tune(gpu_id, storage: str = None):
+def tune(gpu_id, storage: str = None, early_stopping = False, early_stopping_threshold = 5):
     if not torch.cuda.is_available():
         device = torch.device("cpu")
     elif 0 <= gpu_id < torch.cuda.device_count():
@@ -498,7 +500,7 @@ def tune(gpu_id, storage: str = None):
         storage=rdb_storage,
         load_if_exists=True,
     )
-    study.optimize(lambda trial: objective(trial, device), n_trials=500)
+    study.optimize(lambda trial: objective(trial, device, early_stopping, early_stopping_threshold), n_trials=500)
 
     pruned_trials = [
         t for t in study.trials if t.state == optuna.trial.TrialState.PRUNED
@@ -532,38 +534,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--storage", default="", type=str, help="Optuna database storage path."
     )
+    parser.add_argument("--early_stopping", default=False, help="Doing early stopping")
+    parser.add_argument("--stopping_threshold", default=5, help="configure stopping threshold")
     args = parser.parse_args()
-    tune(args.gpu, storage=args.storage if args.storage != "" else None)
-
-"""
-best_epoch_list = []
-early_stopping_count = 0
-
-if epoch % 10 == 0:
-    if epoch//10 <= 2 and f1 < epoch//10 * 0.35:
-
-    return acc, f1
-
-if best_f1 > 학습 결과 f1:
-    early_stopping_count += 1
-else: early_stopping_count = 0
-
-if early_stopping_count == 5:
-# 학습 끝나면
-
-
-
-
-tmp = best_test_f1
-if epoch == 9 and best_test_f1 < 0.20:
-    tmp = best_test_f1
-elif epoch == 19 and best_test_f1 - tmp < 0.2:
-    tmp = best_test_f1
-    return best_test_acc, best_test_f1
-elif epoch == 29 and best_test_f1 - tmp < 0.2:
-    tmp = best_test_f1
-    return best_test_acc, best_test_f1
-elif epoch == 39 and best_test_f1 - tmp < 0.2:
-    tmp = best_test_f1
-    return best_test_acc, best_test_f1
-"""
+    tune(args.gpu, args.storage if args.storage != "" else None, args.early_stopping, args.stopping_threshold)
