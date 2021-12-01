@@ -179,7 +179,7 @@ class TorchTrainer:
                 )
             pbar.close()
 
-            _, test_f1, test_acc = self.test(
+            _, test_f1, test_acc, preds, gt = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
 
@@ -201,6 +201,7 @@ class TorchTrainer:
             best_test_f1 = test_f1
             self.stopping_count = 0
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
+<<<<<<< HEAD
             if best_test_f1 > 0.6:
                 save_model(
                     model=self.model,
@@ -209,6 +210,15 @@ class TorchTrainer:
                     device=self.device,
                 )
                 save_classification_report(path=self.log_dir, preds=preds, gt=gt)
+=======
+            save_model(
+                model=self.model,
+                path=os.path.join(self.log_dir, "best.pt"),
+                data=data,
+                device=self.device,
+            )
+            save_classification_report(path=self.log_dir, preds=preds, gt=gt)
+>>>>>>> origin
 
         return best_test_acc, best_test_f1
 
@@ -267,7 +277,7 @@ class TorchTrainer:
         f1 = f1_score(
             y_true=gt, y_pred=preds, labels=label_list, average="macro", zero_division=0
         )
-        return loss, f1, accuracy
+        return loss, f1, accuracy, preds, gt
 
 
 def count_model_params(

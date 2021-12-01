@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+import os
+>>>>>>> origin
 from typing import Any, Dict, Union, List
 
 import numpy as np
@@ -19,7 +23,8 @@ def get_label_counts(dataset_path: str):
     """Counts for each label."""
     if not dataset_path:
         return None
-    td = ImageFolder(root=dataset_path)
+    train_data_path = os.path.join(dataset_path, 'train')
+    td = ImageFolder(root=train_data_path)
     # get label distribution
     label_counts = [0] * len(td.classes)
     for p, l in td.samples:
@@ -31,4 +36,8 @@ def save_classification_report(path: str, preds: List[int], gt: List[int]):
     result = classification_report(gt, preds, zero_division=1)
     log_path = os.path.join(path, 'classification_result.txt')
     with open(log_path, 'w', encoding='utf-8') as f:
+<<<<<<< HEAD
         f.write(result)
+=======
+        f.write(result)
+>>>>>>> origin

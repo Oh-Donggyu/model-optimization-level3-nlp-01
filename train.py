@@ -48,8 +48,8 @@ def train(
     train_dl, val_dl, test_dl = create_dataloader(data_config)
 
     # Create optimizer, scheduler, criterion
-    optimizer = torch.optim.SGD(
-        model_instance.model.parameters(), lr=data_config["INIT_LR"], momentum=0.9
+    optimizer = torch.optim.Adam(
+        model_instance.model.parameters(), lr=data_config["INIT_LR"]
     )
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer=optimizer,
@@ -63,6 +63,8 @@ def train(
         if data_config["DATASET"] == "TACO"
         else None,
         device=device,
+        fp16=True,
+        loss_type="logit_adjustment_loss"
     )
     # Amp loss scaler
     scaler = (
@@ -77,7 +79,7 @@ def train(
         scheduler=scheduler,
         scaler=scaler,
         device=device,
-        model_path=model_path,
+        log_dir=log_dir,
         verbose=1,
     )
     best_acc, best_f1 = trainer.train(
@@ -88,7 +90,7 @@ def train(
 
     # evaluate model with test set
     model_instance.model.load_state_dict(torch.load(model_path))
-    test_loss, test_f1, test_acc = trainer.test(
+    test_loss, test_f1, test_acc, _, _ = trainer.test(
         model=model_instance.model, test_dataloader=val_dl if val_dl else test_dl
     )
     return test_loss, test_f1, test_acc
