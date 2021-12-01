@@ -20,7 +20,8 @@ def get_label_counts(dataset_path: str):
     """Counts for each label."""
     if not dataset_path:
         return None
-    td = ImageFolder(root=dataset_path)
+    train_data_path = os.path.join(dataset_path, 'train')
+    td = ImageFolder(root=train_data_path)
     # get label distribution
     label_counts = [0] * len(td.classes)
     for p, l in td.samples:

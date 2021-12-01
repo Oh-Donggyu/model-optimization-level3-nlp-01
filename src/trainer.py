@@ -89,6 +89,8 @@ class TorchTrainer:
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
+        early_stopping: bool = False,
+        early_stopping_threshold: int = 5
     ) -> None:
         """Initialize TorchTrainer class.
 
@@ -108,6 +110,9 @@ class TorchTrainer:
         self.scaler = scaler
         self.verbose = verbose
         self.device = device
+        self.early_stopping = early_stopping
+        self.stopping_count = 0
+        self.stopping_threshold = early_stopping_threshold
 
     def train(
         self,
@@ -185,12 +190,23 @@ class TorchTrainer:
             elif epoch == 49 and best_test_f1 < 0.45:
                 return best_test_acc, best_test_f1
             if best_test_f1 > test_f1:
+                if self.early_stopping:
+                    self.stopping_count += 1
+                    if self.stopping_count == self.stopping_threshold:
+                        print(f"Early Stopping !, epoch: {epoch}")
+                        return best_test_acc, best_test_f1
                 continue
             
             best_test_acc = test_acc
             best_test_f1 = test_f1
+            self.stopping_count = 0
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
+<<<<<<< HEAD
+<<<<<<< HEAD
+            if best_test_f1 > 0.6:
+=======
             if best_test_f1 > 0.5:
+>>>>>>> 553d104cf3637523fbcb1ee9b8810d0683798b99
                 save_model(
                     model=self.model,
                     path=os.path.join(self.log_dir, "best.pt"),
@@ -198,6 +214,15 @@ class TorchTrainer:
                     device=self.device,
                 )
                 save_classification_report(path=self.log_dir, preds=preds, gt=gt)
+=======
+            save_model(
+                model=self.model,
+                path=os.path.join(self.log_dir, "best.pt"),
+                data=data,
+                device=self.device,
+            )
+            save_classification_report(path=self.log_dir, preds=preds, gt=gt)
+>>>>>>> origin
 
         return best_test_acc, best_test_f1
 
