@@ -89,6 +89,8 @@ class TorchTrainer:
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
+        early_stopping: bool = False,
+        early_stopping_threshold: int = 5
     ) -> None:
         """Initialize TorchTrainer class.
 
@@ -108,6 +110,9 @@ class TorchTrainer:
         self.scaler = scaler
         self.verbose = verbose
         self.device = device
+        self.early_stopping = early_stopping
+        self.stopping_count = 0
+        self.stopping_threshold = early_stopping_threshold
 
     def train(
         self,
@@ -133,7 +138,7 @@ class TorchTrainer:
         for epoch in range(n_epoch):
             running_loss, correct, total = 0.0, 0, 0
             preds, gt = [], []
-            pbar = tqdm(enumerate(train_dataloader), total=len(train_dataloader))
+            pbar = tqdm(enumerate(train_dataloader), total=len(train_dataloader), ncols=150)
             self.model.train()
             for batch, (data, labels) in pbar:
                 data, labels = data.to(self.device), labels.to(self.device)
@@ -177,18 +182,34 @@ class TorchTrainer:
             _, test_f1, test_acc, preds, gt = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
+
+            if epoch == 9 and best_test_f1 < 0.20:
+                return best_test_acc, best_test_f1
+            elif epoch == 25 and best_test_f1 < 0.25:
+                return best_test_acc, best_test_f1
+            elif epoch == 49 and best_test_f1 < 0.45:
+                return best_test_acc, best_test_f1
             if best_test_f1 > test_f1:
+                if self.early_stopping:
+                    self.stopping_count += 1
+                    if self.stopping_count == self.stopping_threshold:
+                        print(f"Early Stopping !, epoch: {epoch}")
+                        return best_test_acc, best_test_f1
                 continue
+            
             best_test_acc = test_acc
             best_test_f1 = test_f1
+            self.stopping_count = 0
             print(f"Model saved. Current best test f1: {best_test_f1:.3f}")
-            save_model(
-                model=self.model,
-                path=os.path.join(self.log_dir, "best.pt"),
-                data=data,
-                device=self.device,
-            )
-            save_classification_report(path=self.log_dir, preds=preds, gt=gt)
+
+            if best_test_f1 > 0.5:
+                save_model(
+                    model=self.model,
+                    path=os.path.join(self.log_dir, "best.pt"),
+                    data=data,
+                    device=self.device,
+                )
+                save_classification_report(path=self.log_dir, preds=preds, gt=gt)
 
         return best_test_acc, best_test_f1
 
@@ -216,7 +237,7 @@ class TorchTrainer:
         num_classes = _get_len_label_from_dataset(test_dataloader.dataset)
         label_list = [i for i in range(num_classes)]
 
-        pbar = tqdm(enumerate(test_dataloader), total=len(test_dataloader))
+        pbar = tqdm(enumerate(test_dataloader), total=len(test_dataloader), ncols=150)
         model.to(self.device)
         model.eval()
         for batch, (data, labels) in pbar:

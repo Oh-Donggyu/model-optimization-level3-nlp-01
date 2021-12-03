@@ -59,7 +59,7 @@ def train(
         pct_start=0.05,
     )
     criterion = CustomCriterion(
-        samples_per_cls=get_label_counts(data_config["DATA_PATH"])
+        samples_per_cls=get_label_counts(os.path.join(data_config["DATA_PATH"], "train"))
         if data_config["DATASET"] == "TACO"
         else None,
         device=device,
