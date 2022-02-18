@@ -40,12 +40,12 @@
 
 - 최종 score는 모델의 f1-score와 모델의 Submit time를 통해 계산 (낮을수록 좋음)
 
-![Untitled](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/d411e9e8-c03d-45a4-b926-ff0f7f9c3d16/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20211203%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20211203T061100Z&X-Amz-Expires=86400&X-Amz-Signature=83e2a49e576d4bc743c64b183c0a4f892f783115145795124120ad464750a4a7&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject)
+<img src="https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F350ce3a1-9982-4dca-90f1-916d4b0b7aaa%2FUntitled.png?table=block&id=5d691c4a-8e4a-4e84-82e1-6d02ee75449b&spaceId=b0dbf334-adaf-4bef-bc18-f64af575fe67&width=2000&userId=d7e4c993-4672-4780-a6d1-903e70822aec&cache=v2" width="400" height="100">
 
 
 ## 프로젝트 구조
 
-![Untitled](https://s3.us-west-2.amazonaws.com/secure.notion-static.com/e33a5252-b462-4b9a-b124-afc7e9073f8d/Untitled.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20211203%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20211203T061113Z&X-Amz-Expires=86400&X-Amz-Signature=7ee85c84e27e1da8febb22a3306be8b3230e09f6c28f317c516d3641747f6dca&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22Untitled.png%22&x-id=GetObject)
+<img src="https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2Feea004fb-0ec6-4b13-8d49-b3022edb11b5%2FUntitled.png?table=block&id=74faa2d9-43a6-4385-8801-b73f0f37eb84&spaceId=b0dbf334-adaf-4bef-bc18-f64af575fe67&width=2000&userId=d7e4c993-4672-4780-a6d1-903e70822aec&cache=v2" width="600" height="200">
 
 - 실험하고자 하는 모델 구조와 하이퍼파라미터 정의
 - 정의한 모델 구조와 하이퍼파라미터 학습
